@@ -1,21 +1,26 @@
 #include "AM.h"
+#include "bf.h"
+#include "stdlib.h"
+#include "string.h"
+#include "stdio.h"
 
 int AM_errno = AME_OK;
 
-struct scan_file {
+typedef struct {
 	int fileDesc;
 	int blocknum;
 	int recordnum;
-};
+} scan_file;
 
-struct open_file {
-	char *fileName
+typedef struct {
+	char *fileName;
 	char attrType1;
 	int attrLength1;
 	char attrType2;
 	int attrLength2;
-};
-scan_file* scan_arr;
+} open_file;
+
+scan_file *scan_arr;
 open_file* open_arr;
 
 
@@ -37,11 +42,11 @@ int AM_CreateIndex(char *fileName,
    BF_CreateFile(fileName); //create
    BF_Block_Init(&block);
    BF_OpenFile(fileName, &fd);
-	 BF_AllocateBlock(fd, block);
+   BF_AllocateBlock(fd, block);
    data = BF_Block_GetData(block);
-	 int root_num = 1;
+   int root_num = 1;
    memcpy(data, "AM", 3);
-	 char* new_str = (char*)calloc(19,sizeof(char));
+   char* new_str = (char*)calloc(19,sizeof(char));
    sprintf(new_str,";%c;%d;%c;%d;%d;",attrType1,attrLength1,attrType2,attrLength2,root_num);
    strncat(*data,new_str,strlen(*data)+20);
    BF_Block_SetDirty(block);
