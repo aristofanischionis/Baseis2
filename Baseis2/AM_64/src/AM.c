@@ -26,6 +26,13 @@ void remove_datadbs(){
 		removed = remove(filename2);
 		removed = remove(filename3);
 		removed = remove(filename4);
+		/*
+		if(removed == 0) {
+      printf("File deleted successfully\n");
+   } else {
+      printf("Error: unable to delete the file\n");
+   }
+		*/
 	}
 
 typedef struct {
@@ -42,17 +49,41 @@ typedef struct {
 	int attrLength2;
 } open_file;
 
-scan_file *scan_arr;
+scan_file* scan_arr;
 open_file* open_arr;
 
+int find_open(){  //finds a spot to put next element in open_arr
+	for(int i =0;i<20;i++){
+		if (open_arr[i] != NULL) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+int find_scan(){  //finds a spot to put next element in scan_arr
+	for(int i =0;i<20;i++){
+		if (scan_arr[i] != NULL) {
+			return i;
+		}
+	}
+	return -1;
+}
 
 void AM_Init() {
 	remove_datadbs();
 	BF_Init(LRU);
-	scan_arr = (scan_file*)calloc(20,sizeof(scan_file));
-	open_arr = (open_file*)calloc(20,sizeof(open_file));
+	scan_arr = (scan_file*)malloc(20 * sizeof(scan_file));
+	for (int i = 0; i < 20; i++) {
+		scan_arr[i] = NULL;
+	}
+	open_arr = (open_file*)malloc(20 * sizeof(open_file));
+	for (int i = 0; i < 20; i++) {
+		open_arr[i] = NULL;
+	}
 	//return;
 }
+
 
 
 int AM_CreateIndex(char *fileName,
@@ -66,7 +97,6 @@ int AM_CreateIndex(char *fileName,
    CALL_OR_DIE(BF_CreateFile(fileName)); //create
    BF_Block_Init(&block);
    CALL_OR_DIE(BF_OpenFile(fileName, &fd));
-	 printf("%d\n", fd);
    CALL_OR_DIE(BF_AllocateBlock(fd, block));
    data = BF_Block_GetData(block);
    int root_num = 1;
@@ -91,6 +121,16 @@ int AM_DestroyIndex(char *fileName) {
 
 
 int AM_OpenIndex (char *fileName) {
+	BF_Block *block;
+  BF_Block_Init(&block);
+  char* data;
+	int fileDesc;
+	CALL_OR_DIE(BF_OpenFile(fileName, &fileDesc));
+	CALL_OR_DIE(BF_GetBlock(*fileDesc, 0, block));
+  data = BF_Block_GetData(block);
+
+
+
   return AME_OK;
 }
 
