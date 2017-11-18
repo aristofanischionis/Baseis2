@@ -3,6 +3,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "stdio.h"
+#include "unistd.h"
 
 int AM_errno = AME_OK;
 
@@ -14,6 +15,7 @@ int AM_errno = AME_OK;
       exit(code);             \
     }                         \
 	}
+
 void remove_datadbs(){
 	  int removed;
 	  char filename[] = "EMP-AGE";
@@ -39,6 +41,7 @@ typedef struct {
 	int fileDesc;
 	int blocknum;
 	int recordnum;
+	int isInitialized;        //shows if it is initialized with file
 } scan_file;
 
 typedef struct {
@@ -47,6 +50,7 @@ typedef struct {
 	int attrLength1;
 	char attrType2;
 	int attrLength2;
+	int isInitialized;       //shows if it is initialized with file
 } open_file;
 
 scan_file* scan_arr;
@@ -54,7 +58,7 @@ open_file* open_arr;
 
 int find_open(){  //finds a spot to put next element in open_arr
 	for(int i =0;i<20;i++){
-		if (open_arr[i] != NULL) {
+		if (open_arr[i].isInitialized != 0) {
 			return i;
 		}
 	}
@@ -63,7 +67,7 @@ int find_open(){  //finds a spot to put next element in open_arr
 
 int find_scan(){  //finds a spot to put next element in scan_arr
 	for(int i =0;i<20;i++){
-		if (scan_arr[i] != NULL) {
+		if (scan_arr[i].isInitialized) {
 			return i;
 		}
 	}
@@ -75,11 +79,11 @@ void AM_Init() {
 	BF_Init(LRU);
 	scan_arr = (scan_file*)malloc(20 * sizeof(scan_file));
 	for (int i = 0; i < 20; i++) {
-		scan_arr[i] = NULL;
+		scan_arr[i].isInitialized = 0;   //this means that cells are not initialized with file
 	}
 	open_arr = (open_file*)malloc(20 * sizeof(open_file));
 	for (int i = 0; i < 20; i++) {
-		open_arr[i] = NULL;
+		open_arr[i].isInitialized = 0;  //this means that cells are not initialized with file
 	}
 	//return;
 }
@@ -126,12 +130,20 @@ int AM_OpenIndex (char *fileName) {
   char* data;
 	int fileDesc;
 	CALL_OR_DIE(BF_OpenFile(fileName, &fileDesc));
-	CALL_OR_DIE(BF_GetBlock(*fileDesc, 0, block));
+	CALL_OR_DIE(BF_GetBlock(fileDesc, 0, block));
   data = BF_Block_GetData(block);
+	BF_Block_SetDirty(block);
+	BF_UnpinBlock(block);
+	char str[2];
+	memcpy(str, data, 2);    //read first 3 bytes from first block and pass them to str
+	if (str != "AM")       //check if a AM file
+		return AME_EOF;      
+	int pos = find_open();
+	open_arr[pos].isInitialized = 1;
+	open_arr[pos].fileName = fileName;
+	//read first block to get remaining struct members
 
-
-
-  return AME_OK;
+	return pos;
 }
 
 
