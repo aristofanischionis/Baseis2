@@ -51,6 +51,7 @@ typedef struct {
 	char attrType2;
 	int attrLength2;
 	int isInitialized;       //shows if it is initialized with file
+  int fileDesc;
 } open_file;
 
 scan_file* scan_arr;
@@ -116,8 +117,11 @@ int AM_CreateIndex(char *fileName,
 int AM_DestroyIndex(char *fileName) {
 	int i;
 	for (i = 0; i < 20; i++) {
-
+    if((strcmp(open_arr[i].fileName,fileName))==0){
+      return AME_EOF;
+    }
 	}
+  remove(fileName);
   return AME_OK;
 }
 ///////////////////////////////PEIRAKSAAA//////////////////////////////////
@@ -182,6 +186,17 @@ int AM_OpenIndex (char *fileName) {
 /////////////////////////////////TELOS PEIRAKSAAA/////////////////////////////////
 
 int AM_CloseIndex (int fileDesc) {
+  int i;
+  for (i = 0; i < 20; i++) {
+    if(scan_arr[i].fileDesc==fileDesc)
+      return AME_EOF;
+  }
+  for (i = 0; i < 20; i++) {
+    if (open_arr[i].fileDesc==fileDesc) {
+      open_arr[i].isInitialized =0;
+    }
+  }
+  BF_CloseFile(fileDesc);
   return AME_OK;
 }
 
