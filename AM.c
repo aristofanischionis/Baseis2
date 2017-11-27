@@ -206,35 +206,52 @@ int AM_CloseIndex (int fileDesc) {
 
 
 int AM_InsertEntry(int fileDesc, void *value1, void *value2) {
-    BF_Block *block;
-    BF_Block_Init(&block);
+    BF_Block* block1;
+    BF_Block* block2;
+    BF_Block_Init(&block1);
+    BF_Block_Init(&block2);
 	int numberofkeys;
-	char * data;
+	char* data;
+    char* data1;
 	numberofkeys=(BF_BLOCK_SIZE-8)/(sizeof(*value1) +4);
 
-	CALL_OR_DIE(BF_AllocateBlock(fileDesc, block)); //root block
-	data = BF_Block_GetData(block);
+	CALL_OR_DIE(BF_AllocateBlock(fileDesc, block1)); //root block
+	data = BF_Block_GetData(block1);
 	*data=1;
 	data+=sizeof(int);
 	BF_Block* pl;
 
 	memcpy(data,&pl,sizeof(pl));
 	data+=sizeof(pl);
+    printf("PL  %d\n",pl );
 	memcpy(data,value1,sizeof(value1));
 	data+=sizeof(value1);
-    BF_Block_SetDirty(block);
-	CALL_OR_DIE(BF_UnpinBlock(block));
-	CALL_OR_DIE(BF_AllocateBlock(fileDesc, block));
-	data = BF_Block_GetData(block);
-	pl=block;
-	*data=2;
-    data+=sizeof(int);
-	BF_Block* dp;
-	memcpy(data,&dp,sizeof(dp));
-	data+=sizeof(dp);
-	memcpy(data,value2,sizeof(value2));
-    BF_Block_SetDirty(block);
-	CALL_OR_DIE(BF_UnpinBlock(block));
+    BF_Block_SetDirty(block1);
+	CALL_OR_DIE(BF_UnpinBlock(block1));
+
+    CALL_OR_DIE(BF_AllocateBlock(fileDesc, block2));  //block of root's record
+	data1 = BF_Block_GetData(block2);
+    data = BF_Block_GetData(block1); // get data pointer in the beginning
+    char *new_string = (char*) malloc(5);
+    strncpy(new_string, data+4, 4);
+    printf("string %s\n", new_string);
+    BF_Block* dp;
+    dp = atoi(new_string);
+    printf("dp %d\n",dp );
+    //data+=sizeof(int);   // goes to pl
+
+
+
+
+	*data1=2;
+    data1+=sizeof(int);
+	//BF_Block* dp;
+	memcpy(data1,&dp,sizeof(dp));
+	data1+=sizeof(dp);
+	memcpy(data1,value2,sizeof(value2));
+
+    BF_Block_SetDirty(block2);
+	CALL_OR_DIE(BF_UnpinBlock(block2));
 
 
 
