@@ -75,56 +75,6 @@ int find_scan(){  //finds a spot to put next element in scan_arr
 	return -1;
 }
 
-void AM_Init() {
-	remove_datadbs();
-	BF_Init(LRU);
-	scan_arr = (scan_file*)malloc(20 * sizeof(scan_file));
-	for (int i = 0; i < 20; i++) {
-		scan_arr[i].isInitialized = 0;   //this means that cells are not initialized with file
-	}
-	open_arr = (open_file*)malloc(20 * sizeof(open_file));
-	for (int i = 0; i < 20; i++) {
-		open_arr[i].isInitialized = 0;  //this means that cells are not initialized with file
-	}
-	//return;
-}
-
-int AM_CreateIndex(char *fileName,
-	               char attrType1,
-	               int attrLength1,
-	               char attrType2,
-	               int attrLength2) {
-	 int fd;
-   BF_Block *block;
-   char* data;
-   CALL_OR_DIE(BF_CreateFile(fileName)); //create
-   BF_Block_Init(&block);
-   CALL_OR_DIE(BF_OpenFile(fileName, &fd));
-   CALL_OR_DIE(BF_AllocateBlock(fd, block));
-   data = BF_Block_GetData(block);
-   int root_num = 1;
-   memcpy(data, "AM", 3);
-   char* new_str = (char*)calloc(21,sizeof(char));
-   sprintf(new_str,";%c;%d;%c;%d;%d;",attrType1,attrLength1,attrType2,attrLength2,root_num);
-   strncat(data,new_str,strlen(data)+22);
-   BF_Block_SetDirty(block);
-   CALL_OR_DIE(BF_UnpinBlock(block));
-   BF_CloseFile(fd);  //recheck
-   return AME_OK;
-}
-
-
-int AM_DestroyIndex(char *fileName) {
-	int i;
-	for (i = 0; i < 20; i++) {
-    if((strcmp(open_arr[i].fileName,fileName))==0){
-      return AME_EOF;
-    }
-	}
-  remove(fileName);
-  return AME_OK;
-}
-///////////////////////////////PEIRAKSAAA//////////////////////////////////
 
 void put_to_open(int i,int pos,char* token){
   switch (i) {
@@ -164,14 +114,66 @@ void get_open_arr(int pos,char* data,char* fileName){
   }
 }
 
+void AM_Init() {
+	remove_datadbs();
+	BF_Init(LRU);
+	scan_arr = (scan_file*)malloc(20 * sizeof(scan_file));
+	for (int i = 0; i < 20; i++) {
+		scan_arr[i].isInitialized = 0;   //this means that cells are not initialized with file
+	}
+	open_arr = (open_file*)malloc(20 * sizeof(open_file));
+	for (int i = 0; i < 20; i++) {
+		open_arr[i].isInitialized = 0;  //this means that cells are not initialized with file
+	}
+	//return;
+}
+
+int AM_CreateIndex(char *fileName,
+	               char attrType1,
+	               int attrLength1,
+	               char attrType2,
+	               int attrLength2) {
+
+   int fd;
+   BF_Block *block;
+   BF_Block_Init(&block);
+   char* data;
+   CALL_OR_DIE(BF_CreateFile(fileName)); //create
+   CALL_OR_DIE(BF_OpenFile(fileName, &fd));
+   CALL_OR_DIE(BF_AllocateBlock(fd, block));
+   data = BF_Block_GetData(block);
+   int root_num = 1;
+   memcpy(data, "AM", 3);
+   char* new_str = (char*)calloc(21,sizeof(char));
+   sprintf(new_str,";%c;%d;%c;%d;%d;",attrType1,attrLength1,attrType2,attrLength2,root_num);
+   strncat(data,new_str,strlen(data)+22);
+   BF_Block_SetDirty(block);
+   CALL_OR_DIE(BF_UnpinBlock(block));
+   BF_CloseFile(fd);
+   return AME_OK;
+}
+
+
+int AM_DestroyIndex(char *fileName) {
+	int i;
+	for (i = 0; i < 20; i++) {
+    if(open_arr[i].isInitialized == 1 && (strcmp(open_arr[i].fileName,fileName))==0){
+      return AME_EOF;
+    }
+	}
+  remove(fileName);
+  return AME_OK;
+}
+
+
 int AM_OpenIndex (char *fileName) {
 	BF_Block *block;
-  BF_Block_Init(&block);
-  char* data;
+    BF_Block_Init(&block);
+    char* data;
 	int fileDesc;
 	CALL_OR_DIE(BF_OpenFile(fileName, &fileDesc));
 	CALL_OR_DIE(BF_GetBlock(fileDesc, 0, block));
-  data = BF_Block_GetData(block);
+    data = BF_Block_GetData(block);
 
 	char str[2];
 	memcpy(str, data, 2);    //read first 3 bytes from first block and pass them to str
@@ -179,21 +181,23 @@ int AM_OpenIndex (char *fileName) {
 		//return AME_EOF;
 	int pos = find_open();
 	get_open_arr(pos,data,fileName);
+	//BF_Block_SetDirty(block);
+    CALL_OR_DIE(BF_UnpinBlock(block));
 
-  BF_UnpinBlock(block);
+
 	return pos;
 }
-/////////////////////////////////TELOS PEIRAKSAAA/////////////////////////////////
+
 
 int AM_CloseIndex (int fileDesc) {
   int i;
   for (i = 0; i < 20; i++) {
-    if(scan_arr[i].fileDesc==fileDesc)
+    if(scan_arr[i].isInitialized == 1 && scan_arr[i].fileDesc==fileDesc)
       return AME_EOF;
   }
   for (i = 0; i < 20; i++) {
-    if (open_arr[i].fileDesc==fileDesc) {
-      open_arr[i].isInitialized =0;
+    if (open_arr[i].isInitialized == 1 && open_arr[i].fileDesc==fileDesc) {
+      open_arr[i].isInitialized = 0;
     }
   }
   BF_CloseFile(fileDesc);
@@ -202,7 +206,40 @@ int AM_CloseIndex (int fileDesc) {
 
 
 int AM_InsertEntry(int fileDesc, void *value1, void *value2) {
-  return AME_OK;
+    BF_Block *block;
+    BF_Block_Init(&block);
+	int numberofkeys;
+	char * data;
+	numberofkeys=(BF_BLOCK_SIZE-8)/(sizeof(*value1) +4);
+
+	CALL_OR_DIE(BF_AllocateBlock(fileDesc, block)); //root block
+	data = BF_Block_GetData(block);
+	*data=1;
+	data+=sizeof(int);
+	BF_Block* pl;
+
+	memcpy(data,&pl,sizeof(pl));
+	data+=sizeof(pl);
+	memcpy(data,value1,sizeof(value1));
+	data+=sizeof(value1);
+    BF_Block_SetDirty(block);
+	CALL_OR_DIE(BF_UnpinBlock(block));
+	CALL_OR_DIE(BF_AllocateBlock(fileDesc, block));
+	data = BF_Block_GetData(block);
+	pl=block;
+	*data=2;
+    data+=sizeof(int);
+	BF_Block* dp;
+	memcpy(data,&dp,sizeof(dp));
+	data+=sizeof(dp);
+	memcpy(data,value2,sizeof(value2));
+    BF_Block_SetDirty(block);
+	CALL_OR_DIE(BF_UnpinBlock(block));
+
+
+
+
+	return AME_OK;
 }
 
 
