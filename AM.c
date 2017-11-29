@@ -4,7 +4,7 @@
 #include "string.h"
 #include "stdio.h"
 
-int epanalhpseis = 0;
+int current_fileDesc = 10292038;
 
 int AM_errno = AME_OK;
 
@@ -238,11 +238,13 @@ void Insert_First(int fileDesc, void *value1, void *value2){
 }
 
 int AM_InsertEntry(int fileDesc, void *value1, void *value2) {
-    if (epanalhpseis == 0) {
+    if (fileDesc != current_fileDesc) {
+        current_fileDesc = fileDesc;
         Insert_First(fileDesc,value1,value2);
+        printf("MPHKAAA\n");
         return AME_OK;
     }
-    
+
 
 	return AME_OK;
 }
