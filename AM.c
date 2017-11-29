@@ -4,6 +4,7 @@
 #include "string.h"
 #include "stdio.h"
 
+int epanalhpseis = 0;
 
 int AM_errno = AME_OK;
 
@@ -204,8 +205,7 @@ int AM_CloseIndex (int fileDesc) {
   return AME_OK;
 }
 
-
-int AM_InsertEntry(int fileDesc, void *value1, void *value2) {
+void Insert_First(int fileDesc, void *value1, void *value2){
     BF_Block* block1;
     BF_Block* block2;
     BF_Block_Init(&block1);
@@ -235,6 +235,14 @@ int AM_InsertEntry(int fileDesc, void *value1, void *value2) {
 
     BF_Block_SetDirty(block2);
 	CALL_OR_DIE(BF_UnpinBlock(block2));
+}
+
+int AM_InsertEntry(int fileDesc, void *value1, void *value2) {
+    if (epanalhpseis == 0) {
+        Insert_First(fileDesc,value1,value2);
+        return AME_OK;
+    }
+    
 
 	return AME_OK;
 }
